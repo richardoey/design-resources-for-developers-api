@@ -1,0 +1,16 @@
+{
+    "name": "design-resource-for-developers-api",
+    "version": "1.0.0",
+    "description": "design-resource-for-developers API",
+    "scripts": {
+        "start:production": "node src/app.js",
+        "start:dev": "nodemon src/app.js"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.12"
+    },
+    "dependencies": {
+        "express": "^4.17.1",
+        "node-fetch": "^2.6.1"
+    }
+}
