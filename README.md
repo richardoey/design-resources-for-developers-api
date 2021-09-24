@@ -9,4 +9,4 @@ Stack:
 ## Services
 
 ### GET /categories
-__List all categories__
+_List all categories_
