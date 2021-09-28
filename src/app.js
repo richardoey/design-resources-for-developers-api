@@ -50,18 +50,18 @@ app.get("/all", async (req, res) => {
 
     // * Regex for retrieving Table of Content
     const tableOfContent = md.slice(tableOfContentIndex, tableOfContentIndex + contentIndex).match(/\[(.+?)\]/g)
-    const allArr = []
+    let allArr = []
 
     if (tableOfContent) {
         tableOfContent.forEach((arr) => {
             arr = arr.replace("[", "").replace("]", "")
             const headingDelimiter = `## ${arr}\n\n>`
             const delimiterLength = headingDelimiter.length
-            const headingStart = md.indexOf(headingDelimiter)
+            let headingStart = md.indexOf(headingDelimiter)
 
-            const headingEnd = md.slice(headingStart + delimiterLength).indexOf('Back to Top')
+            let headingEnd = md.slice(headingStart + delimiterLength).indexOf('Back to Top')
 
-            const oneCategory = md.slice(headingStart + delimiterLength, headingStart + delimiterLength + headingEnd)
+            let oneCategory = md.slice(headingStart + delimiterLength, headingStart + delimiterLength + headingEnd)
             
             // TODO : Make a row retrieve function and call getRowData() function
             
@@ -89,7 +89,7 @@ app.get('/categories', async (req, res) => {
     // * Regex for retrieving Table of Content
     const tableOfContent = md.slice(tableOfContentIndex, tableOfContentIndex + contentIndex).match(/\[(.+?)\]/g)
 
-    const tableOfContentArr = []
+    let tableOfContentArr = []
 
     // * If found
     if (tableOfContent) {
@@ -97,11 +97,11 @@ app.get('/categories', async (req, res) => {
             arr = arr.replace("[", "").replace("]", "")
             const headingDelimiter = `## ${arr}\n\n>`
             const delimiterLength = headingDelimiter.length
-            const headingStart = md.indexOf(headingDelimiter)
+            let headingStart = md.indexOf(headingDelimiter)
 
-            const headingEnd = md.slice(headingStart + delimiterLength).indexOf('\n\n|')
+            let headingEnd = md.slice(headingStart + delimiterLength).indexOf('\n\n|')
 
-            const description = md.slice(headingStart + delimiterLength, headingStart + delimiterLength + headingEnd)
+            let description = md.slice(headingStart + delimiterLength, headingStart + delimiterLength + headingEnd)
 
             return tableOfContentArr.push({
                 "category": arr,
