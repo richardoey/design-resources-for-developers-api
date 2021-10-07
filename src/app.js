@@ -6,9 +6,9 @@ const fetch = require('node-fetch')
 const fetchReadme = async () => {
     const githubURL = "https://raw.githubusercontent.com/bradtraversy/design-resources-for-developers/master/readme.md"
     const response = await fetch(githubURL)
-    const data = await response.text()
+    const readmeText = await response.text()
 
-    return data
+    return readmeText
 }
 
 const getRowData = (text) => {
