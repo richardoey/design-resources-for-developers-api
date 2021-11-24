@@ -1,4 +1,5 @@
 const express = require('express')
+
 const app = express()
 const port = process.env.PORT || 3000
 const fetch = require('node-fetch')
@@ -12,22 +13,25 @@ const fetchReadme = async () => {
 }
 
 const getRowData = (text) => {
-    const webStartIndex = text.indexOf('[')
-    const webEndIndex = text.indexOf(']')
-    const webTitle = text.splice(webStartIndex + 1, webEndIndex - 1)
-
-    const urlStartIndex = text.splice(webEndIndex).indexOf('(')
-    const urlEndIndex = text.splice(webEndIndex).indexOf(')')
-    const urlLink = text.splice(urlStartIndex + 1, urlEndIndex - 1)
-
-    const descStartIndex = text.splice(urlEndIndex).indexOf("|")
-    const descEndIndex = text.splice(urlEndIndex).indexOf("|\n|")
-    const description = text.splice(descStartIndex + 1, descEndIndex - 1).trim()
-
-    return {
-        "web": webTitle,
-        "url": urlLink,
-        "description": description
+    // * text = | [WhatFont](https://chrome.google.com/webstore/detail/whatfont/jabopobgcpjmedljpbcaablpmlmfcogm) | The easiest way to identify fonts on web pages.|
+    if (text){
+        const webStartIndex = text.indexOf('[')
+        const webEndIndex = text.indexOf(']')
+        const webTitle = text.slice(webStartIndex + 1, webEndIndex)
+        
+        const urlStartIndex = text.indexOf('(')
+        const urlEndIndex = text.indexOf(')')
+        const urlLink = text.slice(urlStartIndex + 1, urlEndIndex )
+        
+        const textSplit = text.split('|')
+        if (textSplit[2] && textSplit[2].match(/([A-Za-z])\w+/g)){
+            const description= textSplit[2].trim()
+            return {
+                "web": webTitle,
+                "url": urlLink,
+                "description": description
+            }
+        }
     }
 
 }
@@ -50,24 +54,52 @@ app.get("/all", async (req, res) => {
 
     // * Regex for retrieving Table of Content
     const tableOfContent = md.slice(tableOfContentIndex, tableOfContentIndex + contentIndex).match(/\[(.+?)\]/g)
+
+    // * Regex for getting Website Table
+    const webTableRegex = /Website&nbsp+/g
+
+    // * Put all of webTableRegex matched index into an array
+    const webIndexArr = []
+    while ((match = webTableRegex.exec(md)) != null) {
+        webIndexArr.push(match.index)
+    }
+
+    const backToTopRegex = /Back To Top+/g
+
+    // * Put all of backToTopRegex matched index into an array
+    const backToTopIndexArr = []
+    while ((match = backToTopRegex.exec(md)) != null) {
+        backToTopIndexArr.push(match.index)
+    }
+
     let allArr = []
 
     if (tableOfContent) {
+        let index = 0
         tableOfContent.forEach((arr) => {
             arr = arr.replace("[", "").replace("]", "")
             const headingDelimiter = `## ${arr}\n\n>`
             const delimiterLength = headingDelimiter.length
             let headingStart = md.indexOf(headingDelimiter)
 
-            let headingEnd = md.slice(headingStart + delimiterLength).indexOf('Back to Top')
+            let headingEnd = md.slice(headingStart + delimiterLength).indexOf('\n\n|')
 
-            let oneCategory = md.slice(headingStart + delimiterLength, headingStart + delimiterLength + headingEnd)
+            let description = md.slice(headingStart + delimiterLength, headingStart + delimiterLength + headingEnd)
             
             // TODO : Make a row retrieve function and call getRowData() function
-            
-            return tableOfContentArr.push({
+            let websiteTable = md.slice(webIndexArr[index], backToTopIndexArr[index])
+            let websiteRows = websiteTable.split('\n')
+            let websiteArr = []
+            for (let i = 1; i < websiteRows.length - 1 ; i++){
+                if(getRowData(websiteRows[i])){
+                    websiteArr.push(getRowData(websiteRows[i]))
+                }
+            }
+            index++
+            return allArr.push({
                 "category": arr,
-                "description": oneCategory
+                "description": description,
+                "resources": websiteArr
             })
         })
         return res.status(200).send(allArr)
@@ -88,7 +120,7 @@ app.get('/categories', async (req, res) => {
 
     // * Regex for retrieving Table of Content
     const tableOfContent = md.slice(tableOfContentIndex, tableOfContentIndex + contentIndex).match(/\[(.+?)\]/g)
-
+   
     let tableOfContentArr = []
 
     // * If found
