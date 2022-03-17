@@ -28,23 +28,15 @@ const getRowData = (text) => {
     if (textSplit[2] && textSplit[2].match(/([A-Za-z])\w+/g)) {
       const description = textSplit[2].trim();
       return {
-        web: webTitle,
-        url: urlLink,
+        name: webTitle,
+        link: urlLink,
         description: description,
       };
     }
   }
 };
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-
-app.get("/markdown", async (req, res) => {
-  return res.status(200).send({ markdown: await fetchReadme() });
-});
-
-app.get("/all", async (req, res) => {
+async function getEntries(){
   // * Find the string index of Table of Contents
   const md = await fetchReadme();
   const tableOfContentIndex = md.indexOf("Table of Contents");
@@ -74,7 +66,7 @@ app.get("/all", async (req, res) => {
     backToTopIndexArr.push(match.index);
   }
 
-  let allArr = [];
+  let entriesArr = [];
 
   if (tableOfContent) {
     let index = 0;
@@ -82,36 +74,48 @@ app.get("/all", async (req, res) => {
       arr = arr.replace("[", "").replace("]", "");
       const headingDelimiter = `## ${arr}\n\n>`;
       const delimiterLength = headingDelimiter.length;
-      let headingStart = md.indexOf(headingDelimiter);
-
-      let headingEnd = md
-        .slice(headingStart + delimiterLength)
-        .indexOf("\n\n|");
-
-      let description = md.slice(
-        headingStart + delimiterLength,
-        headingStart + delimiterLength + headingEnd
-      );
 
       let websiteTable = md.slice(webIndexArr[index], backToTopIndexArr[index]);
       let websiteRows = websiteTable.split("\n");
-      let websiteArr = [];
       for (let i = 1; i < websiteRows.length - 1; i++) {
         if (getRowData(websiteRows[i])) {
-          websiteArr.push(getRowData(websiteRows[i]));
+          let entry = getRowData(websiteRows[i]);
+          entry["category"] = arr;
+          entriesArr.push(entry);
         }
       }
       index++;
-      return allArr.push({
-        category: arr,
-        description: description,
-        resources: websiteArr,
-      });
     });
-    return res.status(200).send(allArr);
+    return {
+      count: entriesArr.length,
+      entries: entriesArr,
+    };
   }
 
-  return res.status(200).send({ all: null });
+  return {
+    code: "entries/not_found",
+    message: "No entries are found",
+  };
+};
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+
+app.get("/markdown", async (req, res) => {
+  return res.status(200).send({ markdown: await fetchReadme() });
+});
+
+app.get("/entries", async (req, res) => {
+  let result = await getEntries()
+  if(!result.code){
+    return res.status(200).send(result)
+  } else {
+    return res.status(404).send({
+      code: "entries/not_found",
+      message: "No entries are found",
+    });
+  }
 });
 
 app.get("/categories", async (req, res) => {
@@ -151,9 +155,15 @@ app.get("/categories", async (req, res) => {
         description: description,
       });
     });
-    return res.status(200).send(tableOfContentArr);
+    return res.status(200).send({
+      count: tableOfContentArr.length,
+      categories: tableOfContentArr,
+    });
   }
-  return res.status(200).send({ categories: null });
+  return res.status(404).send({
+    code: "categories/not_found",
+    message: "No categories are found",
+  });
 });
 
 app.get("/category/:categoryName/all", async (req, res) => {
@@ -203,14 +213,23 @@ app.get("/category/:categoryName/all", async (req, res) => {
     return res.status(200).send({ result: resourcesArr });
   }
 
-  return res.status(200).send({ all: null });
+  return res.status(404).send({
+    code: "categories/list/not_found",
+    message: "No resources are found for this category",
+  });
 });
 
 app.get("/random", async (req, res) => {
-  // * Call /all function
-  await fetch("http://localhost:3000/all").then((res) => {
-    let randomCategory;
-  });
-
-  return res.status(200).send({ all: null });
+  
+  let result = await getEntries()
+  let randomNum = (Math.random() * result.entries.length).toFixed(0)
+  if(!result.code){
+    return res.status(200).send(result.entries[randomNum])
+  } else {
+    return res.status(404).send({
+      code: "random/not_found",
+      message: "No random entry is found",
+    });
+  }
+ 
 });

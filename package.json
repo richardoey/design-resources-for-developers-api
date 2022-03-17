@@ -1,6 +1,6 @@
 {
   "name": "design-resource-for-developers-api",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "design-resource-for-developers API",
   "scripts": {
     "start:production": "node src/app.js --port=80",
