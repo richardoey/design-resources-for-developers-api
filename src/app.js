@@ -108,7 +108,7 @@ app.get(`/${config.prefix}/${config.version}/markdown`, async (req, res) => {
   return res.status(200).send({ markdown: await fetchReadme() });
 });
 
-app.get("/entries", async (req, res) => {
+app.get(`/${config.prefix}/${config.version}/entries`, async (req, res) => {
   let result = await getEntries();
   if (!result.code) {
     return res.status(200).send(result);
