@@ -1,7 +1,7 @@
 # ROADMAP
 
-- [ ] Fetch all categories
-- [ ] Fetch all API
-- [ ] Fetch API list based on category
+- [X] Fetch all categories
+- [X] Fetch all API
+- [X] Fetch API list based on category
 - [ ] Deadlink checker
 - [ ] API Health status

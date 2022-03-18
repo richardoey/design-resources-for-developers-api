@@ -1,5 +1,7 @@
 const express = require("express");
 
+const config = require('../config.json');
+
 const app = express();
 const port = process.env.PORT || 3000;
 const fetch = require("node-fetch");
@@ -102,7 +104,7 @@ app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-app.get("/markdown", async (req, res) => {
+app.get(`/${config.prefix}/${config.version}/markdown`, async (req, res) => {
   return res.status(200).send({ markdown: await fetchReadme() });
 });
 
@@ -118,7 +120,7 @@ app.get("/entries", async (req, res) => {
   }
 });
 
-app.get("/categories", async (req, res) => {
+app.get(`/${config.prefix}/${config.version}/categories`, async (req, res) => {
   // * Find the string index of Table of Contents
   const md = await fetchReadme();
   const tableOfContentIndex = md.indexOf("Table of Contents");
@@ -166,7 +168,7 @@ app.get("/categories", async (req, res) => {
   });
 });
 
-app.get("/category/:categoryName", async (req, res) => {
+app.get(`/${config.prefix}/${config.version}/category/:categoryName`, async (req, res) => {
   // * Find the string index of Table of Contents
   let categoryName = req.params.categoryName;
   let resourcesArr = [];
@@ -215,7 +217,7 @@ app.get("/category/:categoryName", async (req, res) => {
   });
 });
 
-app.get("/random", async (req, res) => {
+app.get(`/${config.prefix}/${config.version}/random`, async (req, res) => {
   let result = await getEntries();
   let randomNum = (Math.random() * result.entries.length).toFixed(0);
   if (!result.code) {
