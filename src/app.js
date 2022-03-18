@@ -36,7 +36,7 @@ const getRowData = (text) => {
   }
 };
 
-async function getEntries(){
+async function getEntries() {
   // * Find the string index of Table of Contents
   const md = await fetchReadme();
   const tableOfContentIndex = md.indexOf("Table of Contents");
@@ -96,7 +96,7 @@ async function getEntries(){
     code: "entries/not_found",
     message: "No entries are found",
   };
-};
+}
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
@@ -107,9 +107,9 @@ app.get("/markdown", async (req, res) => {
 });
 
 app.get("/entries", async (req, res) => {
-  let result = await getEntries()
-  if(!result.code){
-    return res.status(200).send(result)
+  let result = await getEntries();
+  if (!result.code) {
+    return res.status(200).send(result);
   } else {
     return res.status(404).send({
       code: "entries/not_found",
@@ -166,7 +166,7 @@ app.get("/categories", async (req, res) => {
   });
 });
 
-app.get("/category/:categoryName/all", async (req, res) => {
+app.get("/category/:categoryName", async (req, res) => {
   // * Find the string index of Table of Contents
   let categoryName = req.params.categoryName;
   let resourcesArr = [];
@@ -175,11 +175,10 @@ app.get("/category/:categoryName/all", async (req, res) => {
   const websiteTableIndex = md.indexOf(`${categoryName}\n\n`);
 
   if (websiteTableIndex > 0) {
-    const backToTopRegex = /Back To Top+/g;
+    const backToTopRegex = "Back To Top";
 
-    const backToTopIndex = md.slice(websiteTableIndex).indexOf(backToTopRegex);
-
-    let index = 0;
+    const backToTopIndex =
+      websiteTableIndex + md.slice(websiteTableIndex).indexOf(backToTopRegex);
     const headingDelimiter = `## ${categoryName}\n\n>`;
     const delimiterLength = headingDelimiter.length;
     let headingStart = md.indexOf(headingDelimiter);
@@ -197,20 +196,17 @@ app.get("/category/:categoryName/all", async (req, res) => {
     for (let i = 3; i < websiteRows.length - 1; i++) {
       if (getRowData(websiteRows[i])) {
         websiteArr.push(getRowData(websiteRows[i]));
-        index++;
       }
     }
 
-    resourcesArr.push({
+    return res.status(200).send({
       category: categoryName,
       description: description,
-      resources: {
-        count: index,
+      entries: {
+        count: websiteArr.length,
         websites: websiteArr,
       },
     });
-
-    return res.status(200).send({ result: resourcesArr });
   }
 
   return res.status(404).send({
@@ -220,16 +216,14 @@ app.get("/category/:categoryName/all", async (req, res) => {
 });
 
 app.get("/random", async (req, res) => {
-  
-  let result = await getEntries()
-  let randomNum = (Math.random() * result.entries.length).toFixed(0)
-  if(!result.code){
-    return res.status(200).send(result.entries[randomNum])
+  let result = await getEntries();
+  let randomNum = (Math.random() * result.entries.length).toFixed(0);
+  if (!result.code) {
+    return res.status(200).send(result.entries[randomNum]);
   } else {
     return res.status(404).send({
       code: "random/not_found",
       message: "No random entry is found",
     });
   }
- 
 });
