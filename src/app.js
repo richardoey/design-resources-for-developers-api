@@ -1,10 +1,26 @@
 const express = require("express");
-
-const config = require('../config.json');
+const cors = require("cors");
+const config = require("../config.json");
 
 const app = express();
 const port = process.env.PORT || 3000;
 const fetch = require("node-fetch");
+
+const allowedOrigins = ["www.example1.com", "www.example2.com"];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg =
+          "The CORS policy for this site does not allow access from the specified Origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+  })
+);
 
 const fetchReadme = async () => {
   const githubURL =
@@ -168,54 +184,59 @@ app.get(`/${config.prefix}/${config.version}/categories`, async (req, res) => {
   });
 });
 
-app.get(`/${config.prefix}/${config.version}/category/:categoryName`, async (req, res) => {
-  // * Find the string index of Table of Contents
-  let categoryName = req.params.categoryName;
-  let resourcesArr = [];
+app.get(
+  `/${config.prefix}/${config.version}/category/:categoryName`,
+  async (req, res) => {
+    // * Find the string index of Table of Contents
+    let categoryName = req.params.categoryName;
+    let resourcesArr = [];
 
-  const md = await fetchReadme();
-  const websiteTableIndex = md.indexOf(`${categoryName}\n\n`);
+    const md = await fetchReadme();
+    const websiteTableIndex = md.indexOf(`${categoryName}\n\n`);
 
-  if (websiteTableIndex > 0) {
-    const backToTopRegex = "Back To Top";
+    if (websiteTableIndex > 0) {
+      const backToTopRegex = "Back To Top";
 
-    const backToTopIndex =
-      websiteTableIndex + md.slice(websiteTableIndex).indexOf(backToTopRegex);
-    const headingDelimiter = `## ${categoryName}\n\n>`;
-    const delimiterLength = headingDelimiter.length;
-    let headingStart = md.indexOf(headingDelimiter);
+      const backToTopIndex =
+        websiteTableIndex + md.slice(websiteTableIndex).indexOf(backToTopRegex);
+      const headingDelimiter = `## ${categoryName}\n\n>`;
+      const delimiterLength = headingDelimiter.length;
+      let headingStart = md.indexOf(headingDelimiter);
 
-    let headingEnd = md.slice(headingStart + delimiterLength).indexOf("\n\n|");
+      let headingEnd = md
+        .slice(headingStart + delimiterLength)
+        .indexOf("\n\n|");
 
-    let description = md.slice(
-      headingStart + delimiterLength,
-      headingStart + delimiterLength + headingEnd
-    );
+      let description = md.slice(
+        headingStart + delimiterLength,
+        headingStart + delimiterLength + headingEnd
+      );
 
-    let websiteTable = md.slice(md.indexOf(description), backToTopIndex);
-    let websiteRows = websiteTable.split("\n");
-    let websiteArr = [];
-    for (let i = 3; i < websiteRows.length - 1; i++) {
-      if (getRowData(websiteRows[i])) {
-        websiteArr.push(getRowData(websiteRows[i]));
+      let websiteTable = md.slice(md.indexOf(description), backToTopIndex);
+      let websiteRows = websiteTable.split("\n");
+      let websiteArr = [];
+      for (let i = 3; i < websiteRows.length - 1; i++) {
+        if (getRowData(websiteRows[i])) {
+          websiteArr.push(getRowData(websiteRows[i]));
+        }
       }
+
+      return res.status(200).send({
+        category: categoryName,
+        description: description,
+        entries: {
+          count: websiteArr.length,
+          websites: websiteArr,
+        },
+      });
     }
 
-    return res.status(200).send({
-      category: categoryName,
-      description: description,
-      entries: {
-        count: websiteArr.length,
-        websites: websiteArr,
-      },
+    return res.status(404).send({
+      code: "categories/list/not_found",
+      message: "No resources are found for this category",
     });
   }
-
-  return res.status(404).send({
-    code: "categories/list/not_found",
-    message: "No resources are found for this category",
-  });
-});
+);
 
 app.get(`/${config.prefix}/${config.version}/random`, async (req, res) => {
   let result = await getEntries();
