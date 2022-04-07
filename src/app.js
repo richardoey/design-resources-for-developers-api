@@ -7,20 +7,19 @@ const app = express();
 const port = process.env.PORT || 3000;
 const fetch = require("node-fetch");
 
-const whitelist = ["http://localhost:4000", "http://localhost/"];
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-};
+// const whitelist = ["http://localhost:4000", "http://localhost/", "http://127.0.0.1/"];
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     if (whitelist.indexOf(origin) !== -1) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+// };
 
 app.use(cookieParser());
 app.use(express.json());
-app.use(cors(corsOptions));
 
 const fetchReadme = async () => {
   const githubURL =
@@ -146,6 +145,7 @@ app.get(
 
 app.get(
   `/${config.prefix}/${config.version}/categories`,
+  cors(),
   async (req, res) => {
     // * Find the string index of Table of Contents
     const md = await fetchReadme();
