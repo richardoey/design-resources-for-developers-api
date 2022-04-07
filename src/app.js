@@ -146,7 +146,6 @@ app.get(
 
 app.get(
   `/${config.prefix}/${config.version}/categories`,
-  cors(corsOptions),
   async (req, res) => {
     // * Find the string index of Table of Contents
     const md = await fetchReadme();
