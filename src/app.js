@@ -7,10 +7,6 @@ const app = express();
 const port = process.env.PORT || 3000;
 const fetch = require("node-fetch");
 
-app.use(cookieParser());
-app.use(express.json());
-app.use(cors());
-
 const whitelist = ["http://localhost:4000", "http://localhost/"];
 const corsOptions = {
   origin: function (origin, callback) {
@@ -21,6 +17,10 @@ const corsOptions = {
     }
   },
 };
+
+app.use(cookieParser());
+app.use(express.json());
+app.use(cors(corsOptions));
 
 const fetchReadme = async () => {
   const githubURL =
@@ -146,7 +146,7 @@ app.get(
 
 app.get(
   `/${config.prefix}/${config.version}/categories`,
-  cors(),
+  cors(corsOptions),
   async (req, res) => {
     // * Find the string index of Table of Contents
     const md = await fetchReadme();
