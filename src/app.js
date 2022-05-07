@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const config = require("../config.json");
 const cookieParser = require("cookie-parser");
+const axios = require("axios");
+const cheerio = require("cheerio");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -30,7 +32,60 @@ const fetchReadme = async () => {
   return readmeText;
 };
 
-const getRowData = (text) => {
+const getFavicon = async (url) => {
+  console.log("sebelum promis");
+
+  console.log("masuk promis");
+
+  if (url.includes("https")) {
+    console.log("if");
+
+    await axios(url)
+      .then((response) => {
+        if (response.status === 200) {
+          const html = response.data;
+          const $ = cheerio.load(html);
+          const linkObjects = $("link");
+
+          console.log("if response status");
+
+          const links = [];
+          linkObjects.each((index, element) => {
+            if (
+              $(element).attr("rel") === "icon" ||
+              $(element).attr("rel") === "shortcut icon"
+            ) {
+              links.push({
+                href: $(element).attr("href").includes("https")
+                  ? $(element).attr("href")
+                  : url + "/" + $(element).attr("href"), // get the href attribute
+                rel: $(element).attr("rel"),
+              });
+            } else if (
+              $(element).attr("href") !== undefined &&
+              $(element).attr("href").includes("favicon")
+            ) {
+              links.push({
+                url: url,
+                href: $(element).attr("href").includes("https")
+                  ? $(element).attr("href")
+                  : url + "/" + $(element).attr("href"),
+                rel: $(element).attr("rel"),
+              });
+            }
+          });
+
+          if (links[0] !== undefined) {
+            console.log("check ", links[0].href);
+            return links[0].href;
+          } else return "Not found";
+        }
+      })
+      .catch((err) => console.log(err));
+  }
+};
+
+const getRowData = async (text) => {
   // * text = | [WhatFont](https://chrome.google.com/webstore/detail/whatfont/jabopobgcpjmedljpbcaablpmlmfcogm) | The easiest way to identify fonts on web pages.|
   if (text) {
     const webStartIndex = text.indexOf("[");
@@ -41,11 +96,15 @@ const getRowData = (text) => {
     const urlEndIndex = text.indexOf(")");
     const urlLink = text.slice(urlStartIndex + 1, urlEndIndex);
 
+    const favicon = await getFavicon(urlLink);
+
+    console.log("favicon", favicon);
     const textSplit = text.split("|");
     if (textSplit[2] && textSplit[2].match(/([A-Za-z])\w+/g)) {
       const description = textSplit[2].trim();
       return {
         name: webTitle,
+        favicon: favicon,
         link: urlLink,
         description: description,
       };
@@ -87,22 +146,22 @@ async function getEntries() {
 
   if (tableOfContent) {
     let index = 0;
-    tableOfContent.forEach((arr) => {
+    for (const arr of tableOfContent) {
       arr = arr.replace("[", "").replace("]", "");
       const headingDelimiter = `## ${arr}\n\n>`;
-      const delimiterLength = headingDelimiter.length;
 
       let websiteTable = md.slice(webIndexArr[index], backToTopIndexArr[index]);
       let websiteRows = websiteTable.split("\n");
       for (let i = 1; i < websiteRows.length - 1; i++) {
-        if (getRowData(websiteRows[i])) {
-          let entry = getRowData(websiteRows[i]);
+        let entry = await getRowData(websiteRows[i]);
+        if (entry) {
           entry["category"] = arr;
           entriesArr.push(entry);
         }
       }
       index++;
-    });
+    }
+
     return {
       count: entriesArr.length,
       entries: entriesArr,
@@ -228,8 +287,9 @@ app.get(
       let websiteRows = websiteTable.split("\n");
       let websiteArr = [];
       for (let i = 3; i < websiteRows.length - 1; i++) {
-        if (getRowData(websiteRows[i])) {
-          websiteArr.push(getRowData(websiteRows[i]));
+        let rowData = await getRowData(websiteRows[i]);
+        if (rowData) {
+          websiteArr.push(rowData);
         }
       }
 
