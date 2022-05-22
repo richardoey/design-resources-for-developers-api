@@ -108,24 +108,55 @@ async function getEntries() {
       entries: entriesArr,
     };
   }
-
-  return {
-    code: "entries/not_found",
-    message: "No entries are found",
-  };
 }
+
+const getCategories = async () => {
+  // * Find the string index of Table of Contents
+  const md = await fetchReadme();
+  const tableOfContentIndex = md.indexOf("Table of Contents");
+
+  // * Find the index of first Content (defined by using \n\n##)
+  const contentIndex = md.slice(tableOfContentIndex).indexOf("\n\n##");
+
+  // * Regex for retrieving Table of Content
+  const tableOfContent = md
+    .slice(tableOfContentIndex, tableOfContentIndex + contentIndex)
+    .match(/\[(.+?)\]/g);
+
+  let tableOfContentArr = [];
+
+  // * If found
+  if (tableOfContent) {
+    tableOfContent.forEach((arr) => {
+      arr = arr.replace("[", "").replace("]", "");
+      const headingDelimiter = `## ${arr}\n\n>`;
+      const delimiterLength = headingDelimiter.length;
+      let headingStart = md.indexOf(headingDelimiter);
+
+      let headingEnd = md
+        .slice(headingStart + delimiterLength)
+        .indexOf("\n\n|");
+
+      let description = md.slice(
+        headingStart + delimiterLength,
+        headingStart + delimiterLength + headingEnd
+      );
+
+      tableOfContentArr.push({
+        category: arr,
+        description: description,
+      });
+    });
+    return {
+      count: tableOfContentArr.length,
+      entries: tableOfContentArr,
+    };
+  }
+};
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
-app.get(
-  `/${config.prefix}/${config.version}/markdown`,
-  cors(),
-  async (req, res) => {
-    return res.status(200).send({ markdown: await fetchReadme() });
-  }
-);
 
 app.get(
   `/${config.prefix}/${config.version}/entries`,
@@ -147,51 +178,18 @@ app.get(
   `/${config.prefix}/${config.version}/categories`,
   cors(),
   async (req, res) => {
-    // * Find the string index of Table of Contents
-    const md = await fetchReadme();
-    const tableOfContentIndex = md.indexOf("Table of Contents");
-
-    // * Find the index of first Content (defined by using \n\n##)
-    const contentIndex = md.slice(tableOfContentIndex).indexOf("\n\n##");
-
-    // * Regex for retrieving Table of Content
-    const tableOfContent = md
-      .slice(tableOfContentIndex, tableOfContentIndex + contentIndex)
-      .match(/\[(.+?)\]/g);
-
-    let tableOfContentArr = [];
-
-    // * If found
-    if (tableOfContent) {
-      tableOfContent.forEach((arr) => {
-        arr = arr.replace("[", "").replace("]", "");
-        const headingDelimiter = `## ${arr}\n\n>`;
-        const delimiterLength = headingDelimiter.length;
-        let headingStart = md.indexOf(headingDelimiter);
-
-        let headingEnd = md
-          .slice(headingStart + delimiterLength)
-          .indexOf("\n\n|");
-
-        let description = md.slice(
-          headingStart + delimiterLength,
-          headingStart + delimiterLength + headingEnd
-        );
-
-        return tableOfContentArr.push({
-          category: arr,
-          description: description,
-        });
-      });
+    let tableOfContentArr = await getCategories();
+    if (!tableOfContentArr.code) {
       return res.status(200).send({
         count: tableOfContentArr.length,
         categories: tableOfContentArr,
       });
+    } else {
+      return res.status(404).send({
+        code: "categories/not_found",
+        message: "No categories are found",
+      });
     }
-    return res.status(404).send({
-      code: "categories/not_found",
-      message: "No categories are found",
-    });
   }
 );
 
@@ -262,6 +260,36 @@ app.get(
       return res.status(404).send({
         code: "random/not_found",
         message: "No random entry is found",
+      });
+    }
+  }
+);
+
+app.get(
+  `/${config.prefix}/${config.version}/search/:type/:keyword`,
+  cors(),
+  async (req, res) => {
+    let keyword = req.params.keyword;
+    let type = req.params.type;
+    let getCategoriesRes, getEntriesRes, result;
+    if (type === "category") {
+      getCategoriesRes = await getCategories();
+      result = getCategoriesRes.entries.filter((res) => {
+        return res.category.toLowerCase().includes(keyword) || res.description.toLowerCase().includes(keyword)
+      });
+    } else {
+      getEntriesRes = await getEntries();
+      result = getEntriesRes.entries.filter((res) => {
+        return res[type].toLowerCase().includes(keyword);
+      });
+    }
+
+    if (result.length > 0) {
+      return res.status(200).send(result);
+    } else {
+      return res.status(404).send({
+        code: `search/${type}/${keyword}/not_found`,
+        message: `No entry is found for ${keyword} in ${type}`,
       });
     }
   }
